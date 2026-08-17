@@ -31,6 +31,41 @@ class SoilModel:
 
 
 @dataclass
+class TwoLayerSoilModel:
+    """
+    Modelo de suelo de dos capas horizontales.
+
+    rho1: resistividad de la capa superior [Ω·m]
+    rho2: resistividad de la capa inferior (semi-infinita) [Ω·m]
+    h1:   espesor de la capa superior [m]
+
+    rho_s / h_s: capa superficial opcional (grava, etc.) para el cálculo
+    de Cs — concepto independiente del modelo de dos capas de tierra
+    (esa capa es delgada, del orden de 0.1 m, y no representa geología).
+    """
+    rho1: float
+    rho2: float
+    h1: float
+    rho_s: Optional[float] = None
+    h_s: float = 0.0
+
+    def __post_init__(self):
+        if self.rho1 <= 0 or self.rho2 <= 0:
+            raise ValueError("rho1 y rho2 deben ser > 0")
+        if self.h1 <= 0:
+            raise ValueError("h1 debe ser > 0")
+        if self.rho_s is not None and self.rho_s <= 0:
+            raise ValueError("La resistividad de superficie (rho_s) debe ser > 0")
+        if self.h_s < 0:
+            raise ValueError("El espesor de la capa superficial (h_s) no puede ser negativo")
+
+    @property
+    def reflection_factor(self) -> float:
+        """K = (rho2 - rho1) / (rho2 + rho1). Rango: (-1, 1)."""
+        return (self.rho2 - self.rho1) / (self.rho2 + self.rho1)
+
+
+@dataclass
 class GridGeometry:
     """Geometría de la malla de puesta a tierra (rectangular, con o sin varillas)."""
     Lx: float  # Longitud de la malla en dirección X [m]

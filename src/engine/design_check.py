@@ -7,7 +7,8 @@ Los agentes (designer, reviewer) deben llamar a `run_design_check()`
 en vez de reimplementar fórmulas.
 """
 
-from .models import SoilModel, GridGeometry, FaultData, DesignResult
+from .models import SoilModel, GridGeometry, FaultData, DesignResult, TwoLayerSoilModel
+from .soil_two_layer import effective_design_resistivity
 from .tolerable_voltages import (
     surface_derating_factor,
     tolerable_step_voltage,
@@ -122,3 +123,27 @@ def run_design_check(
         passes=mesh_ok and step_ok,
         notes=notes,
     )
+
+
+def run_design_check_two_layer(
+    soil: TwoLayerSoilModel,
+    grid: GridGeometry,
+    fault: FaultData,
+    body_kg: float = 50,
+) -> DesignResult:
+    """
+    Igual que `run_design_check`, pero para suelo de dos capas.
+
+    Convierte el modelo de dos capas a una resistividad uniforme
+    equivalente (ver `soil_two_layer.effective_design_resistivity` —
+    es una APROXIMACIÓN de ingeniería, no una fórmula literal de la
+    norma) y corre el mismo motor normativo sobre esa resistividad
+    equivalente. La nota explicativa queda registrada en el resultado.
+    """
+    rho_eff, note = effective_design_resistivity(soil, grid)
+
+    equivalent_soil = SoilModel(rho=rho_eff, rho_s=soil.rho_s, h_s=soil.h_s)
+    result = run_design_check(equivalent_soil, grid, fault, body_kg=body_kg)
+    result.notes.insert(0, note)
+
+    return result

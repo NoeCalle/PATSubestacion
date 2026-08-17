@@ -28,9 +28,13 @@ examples/     # Casos de ejemplo (inputs/outputs)
 
 - ✅ **Motor de cálculo normativo IEEE 80** (`src/engine/`) — suelo uniforme,
   Em, Es, GPR, Rg (Sverak), factor de decremento, factores geométricos
-  Km/Ki/Kii/Kh/Ks. 21 tests pasando (`pytest tests/`). Ver ejemplo en
-  `examples/basic_grid_example.py`.
-- ⏳ Modelo de suelo de dos capas
+  Km/Ki/Kii/Kh/Ks. Ver ejemplo en `examples/basic_grid_example.py`.
+- ✅ **Modelo de suelo de dos capas** (`src/engine/soil_two_layer.py`) —
+  resistividad aparente de Wenner, ajuste (curve fitting) de ρ1/ρ2/h1
+  desde mediciones de campo, y resistividad efectiva para diseño
+  (aproximación de ingeniería, documentada como tal — ver docstring).
+  Ver ejemplo en `examples/two_layer_soil_example.py`.
+- 34 tests pasando (`pytest tests/ -v`).
 - ⏳ Perfil de potencial en grilla completa (base para gráfico 3D)
 - ⏳ Stack técnico de orquestación multi-agente
 - ⏳ Definición de roles/prompts de cada agente (coordinador, suelo,
@@ -44,11 +48,20 @@ pip install -r requirements.txt
 pytest tests/ -v
 ```
 
-### Cómo correr el ejemplo
+### Cómo correr los ejemplos
 
 ```bash
-python examples/basic_grid_example.py
+python examples/basic_grid_example.py       # suelo uniforme
+python examples/two_layer_soil_example.py   # suelo de dos capas (desde datos de campo)
 ```
+
+> **Nota sobre el modelo de dos capas**: la conversión de un modelo de dos
+> capas a una resistividad "efectiva" para el cálculo de Rg/Em/Es es una
+> **aproximación de ingeniería** (radio equivalente + resistividad aparente
+> de Wenner), no una fórmula literal única de IEEE 80. Para diseños
+> críticos se recomienda contrastar con software especializado (CDEGS,
+> ETAP) o el criterio del ingeniero revisor. Queda documentado en el
+> docstring de `soil_two_layer.py` y en las notas del resultado.
 
 > **Nota metodológica**: los tests del motor verifican consistencia interna
 > y comportamiento físico esperado (sanity checks de ingeniería), no
