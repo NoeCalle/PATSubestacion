@@ -24,11 +24,37 @@ examples/     # Casos de ejemplo (inputs/outputs)
 
 ## Estado del proyecto
 
-🚧 En construcción. Próximos pasos:
-1. Motor de cálculo IEEE 80 (fórmulas, inputs, outputs)
-2. Stack técnico de orquestación multi-agente
-3. Definición de roles/prompts de cada agente
-4. Documentación de flujo (README/diagrama)
+🚧 En construcción.
+
+- ✅ **Motor de cálculo normativo IEEE 80** (`src/engine/`) — suelo uniforme,
+  Em, Es, GPR, Rg (Sverak), factor de decremento, factores geométricos
+  Km/Ki/Kii/Kh/Ks. 21 tests pasando (`pytest tests/`). Ver ejemplo en
+  `examples/basic_grid_example.py`.
+- ⏳ Modelo de suelo de dos capas
+- ⏳ Perfil de potencial en grilla completa (base para gráfico 3D)
+- ⏳ Stack técnico de orquestación multi-agente
+- ⏳ Definición de roles/prompts de cada agente (coordinador, suelo,
+  diseñador, revisor, visualización 3D, reportes)
+- ⏳ Documentación de flujo (diagrama)
+
+### Cómo correr los tests
+
+```bash
+pip install -r requirements.txt
+pytest tests/ -v
+```
+
+### Cómo correr el ejemplo
+
+```bash
+python examples/basic_grid_example.py
+```
+
+> **Nota metodológica**: los tests del motor verifican consistencia interna
+> y comportamiento físico esperado (sanity checks de ingeniería), no
+> reproducen un ejemplo numérico específico del libro IEEE 80-2013 dígito
+> por dígito. Validación manual adicional por un ingeniero habilitado es
+> necesaria antes de usar este motor en un proyecto real.
 
 ## Licencia
 
