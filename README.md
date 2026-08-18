@@ -19,6 +19,7 @@ src/
   visual/     # Visualización 3D interactiva (plotly) — solo renderiza, no calcula
   reporting/  # Memoria de cálculo en Word (python-docx) — solo formatea, no calcula
   agents/     # Sistema de agentes (coordinador, suelo, diseñador, revisor) — agnóstico de proveedor LLM
+  webapp/     # Interfaz web local (Flask) — usa la interfaz CLI o web indistintamente
 docs/         # Documentación técnica y de arquitectura
 tests/        # Tests del motor de cálculo
 examples/     # Casos de ejemplo (inputs/outputs)
@@ -74,7 +75,18 @@ examples/     # Casos de ejemplo (inputs/outputs)
   terminal, en vez de inventarlos o quedarse con una descripción
   incompleta. Convierte el pipeline de un guion de una sola pasada en
   una conversación real. Ver `examples/interactive_agent_session.py`.
-- **85 tests pasando** (`pytest tests/ -v`).
+- ✅ **Interfaz web local** (`src/webapp/`, Flask) — corre en tu laptop
+  y sirve una página HTML donde configurás el proveedor/API key, escribís
+  lo que sepas de suelo y proyecto, y ves el progreso de los agentes en
+  vivo (log estilo panel de control). Cuando un agente necesita un dato
+  (vía `ask_human`), la pregunta aparece en la página y tu respuesta
+  desbloquea el pipeline — sin usar la terminal en absoluto. Al terminar,
+  descargás la memoria de cálculo directo desde el navegador.
+  Arquitectura: `HumanInterface` intercambiable (`CLIHumanInterface` /
+  `WebHumanInterface`) para que el mismo agente funcione con cualquiera
+  de las dos interfaces sin cambios. La API key nunca sale de tu máquina
+  (va del navegador a este mismo servidor local).
+- **94 tests pasando** (`pytest tests/ -v`).
 - ⏳ Documentación de flujo (diagrama)
 - ⏳ Modelador determinista (CLI sin IA, formulario paso a paso) — pendiente, discutido como "Producto A"
 
@@ -103,7 +115,23 @@ coordinador tampoco es un LLM: la secuencia y los reintentos son lógica
 Python fija y auditable, no una decisión que dependa de que un modelo
 "razone bien".
 
-### Cómo correr el pipeline de agentes con tu propia API key
+### Cómo correr la interfaz web local
+
+```bash
+pip install -r requirements.txt -r requirements-agents.txt -r requirements-web.txt
+python src/webapp/app.py
+```
+
+Abrí `http://127.0.0.1:5000` en tu navegador. Escribís tu API key ahí
+(queda solo en memoria del servidor local, nunca se guarda en disco ni
+sale de tu máquina), contás lo que sepas del proyecto, y seguís el
+progreso en vivo. Si el sistema necesita un dato que no le diste, te lo
+va a preguntar en la misma página.
+
+> ⚠️ Pensado para un solo usuario corriendo en su propia máquina — no
+> lo expongas a internet ni lo uses para varias sesiones a la vez.
+
+### Cómo correr el pipeline de agentes por terminal (CLI)
 
 ```bash
 pip install -r requirements.txt -r requirements-agents.txt

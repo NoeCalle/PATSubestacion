@@ -12,7 +12,7 @@ de decisión que no debería depender de que un modelo "razone bien"
 sobre cuándo reintentar -- es una regla de negocio simple y fija.
 """
 
-from typing import Optional
+from typing import Optional, Callable, Dict, Any
 
 from .session import DesignSession
 from .soil_agent import create_soil_agent
@@ -21,6 +21,8 @@ from .reviewer_agent import create_reviewer_agent
 from .report_integration import build_report_from_session
 from .providers.base import LLMProvider
 from ..reporting import ProjectInfo
+
+EventCallback = Callable[[Dict[str, Any]], None]
 
 
 def run_design_pipeline(
@@ -31,6 +33,7 @@ def run_design_pipeline(
     report_output_path: Optional[str] = None,
     project_info: Optional[ProjectInfo] = None,
     visualization_reference: Optional[str] = None,
+    on_event: Optional[EventCallback] = None,
 ) -> DesignSession:
     """
     Ejecuta el flujo completo: interpretación de suelo -> diseño ->
@@ -50,16 +53,28 @@ def run_design_pipeline(
       si ningún agente llegó a llamar la herramienta de cálculo).
     project_info / visualization_reference: se pasan directo al
       generador de reportes si report_output_path está definido.
+    on_event: callback opcional que se llama con eventos de progreso
+      estructurados ({"type": "soil_started", ...}, {"type":
+      "designer_done", "iteration": 1, "text": ...}, etc.) -- usado
+      por la interfaz web (src/webapp) para mostrar avance en vivo.
+      No afecta la lógica del pipeline si no se pasa.
 
     ⚠️ El resultado de esta función (incluso si final_verdict ==
     "APROBADO", e incluso si se generó el .docx) es un insumo para el
     ingeniero que revisa y firma el informe -- no es una aprobación
     normativa final por sí sola.
     """
+
+    def emit(event_type: str, **kwargs) -> None:
+        if on_event:
+            on_event({"type": event_type, **kwargs})
+
     session = DesignSession()
 
+    emit("soil_started")
     soil_agent = create_soil_agent(provider)
     session.soil_result = soil_agent.run(soil_data_description)
+    emit("soil_done", text=session.soil_result.final_text)
 
     designer_agent = create_designer_agent(provider)
     reviewer_agent = create_reviewer_agent(provider)
@@ -73,22 +88,28 @@ def run_design_pipeline(
     for iteration in range(max_review_iterations):
         session.iterations = iteration + 1
 
+        emit("designer_started", iteration=session.iterations)
         designer_result = designer_agent.run(
             "Proponé y verificá una geometría de malla que cumpla la norma "
             "para este proyecto.",
             extra_context=designer_context,
         )
         session.designer_results.append(designer_result)
+        emit("designer_done", iteration=session.iterations, text=designer_result.final_text)
 
+        emit("reviewer_started", iteration=session.iterations)
         reviewer_result = reviewer_agent.run(
             "Auditá de forma independiente la siguiente propuesta de diseño.",
             extra_context=f"Propuesta del diseñador:\n{designer_result.final_text}",
         )
         session.reviewer_results.append(reviewer_result)
+        emit("reviewer_done", iteration=session.iterations, text=reviewer_result.final_text)
 
         if reviewer_result.final_text.strip().upper().startswith("APROBADO"):
             session.final_verdict = "APROBADO"
+            emit("approved", iteration=session.iterations)
             _maybe_generate_report(session, report_output_path, project_info, visualization_reference)
+            emit("report_ready" if session.report_path else "report_unavailable", path=session.report_path)
             return session
 
         # Realimentación explícita al diseñador para la siguiente iteración
@@ -101,7 +122,9 @@ def run_design_pipeline(
         )
 
     session.final_verdict = "NO_RESUELTO"
+    emit("not_resolved")
     _maybe_generate_report(session, report_output_path, project_info, visualization_reference)
+    emit("report_ready" if session.report_path else "report_unavailable", path=session.report_path)
     return session
 
 

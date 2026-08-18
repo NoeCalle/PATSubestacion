@@ -28,6 +28,7 @@ from typing import Dict, Any, Callable, List, Optional, Tuple, Union
 from ..engine.models import SoilModel, GridGeometry, FaultData, TwoLayerSoilModel, DesignResult
 from ..engine.design_check import run_design_check, run_design_check_two_layer
 from ..engine.soil_two_layer import fit_two_layer_model
+from .human_interface import HumanInterface, CLIHumanInterface
 
 
 def build_grid_from_params(kwargs: Dict[str, Any]) -> GridGeometry:
@@ -114,22 +115,31 @@ def _fit_two_layer(**kwargs) -> Dict[str, Any]:
 
 def _ask_human(question: str) -> str:
     """
-    Imprime la pregunta al usuario real por la terminal y espera su
-    respuesta escrita con input(). Esto es lo que hace posible una
-    conversación real entre el agente y la persona -- sin esto, un
-    agente que "necesita preguntar algo" solo termina su turno con una
-    pregunta que nadie llega a ver ni responder.
-
-    Solo funciona en una sesión interactiva real (una terminal con
-    entrada estándar). En un script no interactivo, input() devuelve
-    vacío o lanza EOFError -- lo capturamos para no crashear, pero en
-    ese caso el agente va a recibir una respuesta vacía.
+    Delega la pregunta a la HumanInterface activa (ver human_interface.py).
+    Por default es CLI (terminal), pero se puede reemplazar con
+    set_human_interface() -- por ejemplo, la interfaz web la reemplaza
+    por una que expone la pregunta en el navegador en vez de imprimirla
+    en la terminal. El agente que llama a esta tool no sabe ni le
+    importa cuál de las dos está activa.
     """
-    print(f"\n🧑‍🔧 Pregunta del agente: {question}")
-    try:
-        return input("> ")
-    except EOFError:
-        return ""
+    return _current_human_interface.ask(question)
+
+
+# Interfaz humana activa a nivel de módulo. Por default, terminal (CLI).
+# Cambiarla con set_human_interface() antes de correr un pipeline (ver
+# src/webapp/app.py para el caso de la interfaz web).
+_current_human_interface: HumanInterface = CLIHumanInterface()
+
+
+def set_human_interface(interface: HumanInterface) -> None:
+    """Reemplaza la interfaz humana usada por ask_human. Debe llamarse
+    ANTES de correr un pipeline que pueda necesitar preguntar algo."""
+    global _current_human_interface
+    _current_human_interface = interface
+
+
+def get_human_interface() -> HumanInterface:
+    return _current_human_interface
 
 
 # --- Parámetros de geometría/falla compartidos entre las dos tools de diseño ---

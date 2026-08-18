@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diseño de Puesta a Tierra — IEEE 80</title>
+<style>
+  :root {
+    --bg-panel: #0F1B24;
+    --bg-panel-raised: #16262F;
+    --bg-paper: #F7F5F0;
+    --bg-paper-raised: #FFFFFF;
+    --text-light: #E8ECEE;
+    --text-light-dim: #93A5AC;
+    --text-dark: #1A2530;
+    --text-dark-dim: #5B6B72;
+    --accent: #F2A93C;
+    --accent-dim: #B9822C;
+    --steel: #3E7C8C;
+    --success: #3F8F5F;
+    --danger: #B0453E;
+    --border: #24363F;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg-paper);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--bg-panel);
+    color: var(--text-light);
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+
+  header p {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text-light-dim);
+    margin: 4px 0 0 0;
+  }
+
+  .grid-icon circle.node {
+    fill: var(--steel);
+  }
+  .grid-icon circle.pulse {
+    fill: var(--accent);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; r: 4; }
+    50% { opacity: 0.35; r: 6; }
+  }
+
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  .panel {
+    background: var(--bg-paper-raised);
+    border: 1px solid #E3DFD3;
+    border-radius: 6px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+
+  .panel h2 {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dark-dim);
+    margin: 0 0 18px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel h2::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  label:first-of-type { margin-top: 0; }
+
+  .hint {
+    font-size: 0.78rem;
+    color: var(--text-dark-dim);
+    margin-top: 3px;
+  }
+
+  select, input[type="text"], input[type="password"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #D8D2C2;
+    border-radius: 4px;
+    background: var(--bg-paper);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    color: var(--text-dark);
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+  }
+
+  textarea { resize: vertical; min-height: 70px; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  button {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 12px 22px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #201203;
+    margin-top: 22px;
+  }
+  .btn-primary:hover { background: var(--accent-dim); }
+  .btn-primary:disabled { background: #D9CBAA; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--steel);
+    color: white;
+  }
+
+  #log-section, #result-section { display: none; }
+
+  #log {
+    font-family: var(--mono);
+    font-size: 0.84rem;
+    background: var(--bg-panel);
+    color: var(--text-light);
+    border-radius: 6px;
+    padding: 18px 20px;
+    max-height: 420px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+
+  .log-entry { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .log-entry:last-child { border-bottom: none; }
+  .log-label {
+    display: inline-block;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    margin-right: 8px;
+    letter-spacing: 0.03em;
+  }
+  .log-label.suelo { background: var(--steel); color: white; }
+  .log-label.disenador { background: var(--accent); color: #201203; }
+  .log-label.revisor { background: #8A5FB0; color: white; }
+  .log-label.sistema { background: #444; color: var(--text-light-dim); }
+  .log-text { white-space: pre-wrap; color: var(--text-light-dim); }
+
+  #question-box {
+    display: none;
+    margin-top: 16px;
+    background: #FFF7E8;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 16px 18px;
+  }
+  #question-text {
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  #question-form { display: flex; gap: 10px; }
+  #question-form input { flex: 1; }
+
+  #verdict {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+  }
+  #verdict.aprobado { background: #E6F2EA; color: var(--success); }
+  #verdict.no_resuelto { background: #FBEAE8; color: var(--danger); }
+
+  #error-box {
+    display: none;
+    background: #FBEAE8;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+    margin-top: 16px;
+  }
+
+  a.download {
+    display: inline-block;
+    background: var(--steel);
+    color: white;
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
+
+  .disclaimer {
+    font-size: 0.78rem;
+    color: var(--text-dark-dim);
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="grid-icon" width="40" height="40" viewBox="0 0 40 40">
+    <g stroke="#3E7C8C" stroke-width="1.5" fill="none">
+      <line x1="6" y1="6" x2="6" y2="34"/><line x1="20" y1="6" x2="20" y2="34"/><line x1="34" y1="6" x2="34" y2="34"/>
+      <line x1="6" y1="6" x2="34" y2="6"/><line x1="6" y1="20" x2="34" y2="20"/><line x1="6" y1="34" x2="34" y2="34"/>
+    </g>
+    <circle class="node" cx="6" cy="6" r="2.5"/><circle class="node" cx="20" cy="6" r="2.5"/><circle class="node" cx="34" cy="6" r="2.5"/>
+    <circle class="node" cx="6" cy="34" r="2.5"/><circle class="node" cx="20" cy="34" r="2.5"/><circle class="node" cx="34" cy="34" r="2.5"/>
+    <circle class="node" cx="6" cy="20" r="2.5"/><circle class="node" cx="34" cy="20" r="2.5"/>
+    <circle class="pulse" cx="20" cy="20" r="4"/>
+  </svg>
+  <div>
+    <h1>Diseño de Puesta a Tierra — IEEE 80</h1>
+    <p>Sesión interactiva con agentes · corre en tu máquina</p>
+  </div>
+</header>
+
+<main>
+
+  <div class="panel" id="setup-panel">
+    <h2>Configuración</h2>
+
+    <div class="row">
+      <div>
+        <label for="provider">Proveedor</label>
+        <select id="provider">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI (ChatGPT)</option>
+        </select>
+      </div>
+      <div>
+        <label for="model">Modelo (opcional)</label>
+        <input type="text" id="model" placeholder="ej. claude-sonnet-5">
+        <div class="hint">Requerido si elegís OpenAI.</div>
+      </div>
+    </div>
+
+    <label for="api-key">API key</label>
+    <input type="password" id="api-key" placeholder="sk-...">
+    <div class="hint">Se manda directo a este servidor local (127.0.0.1) — no sale de tu máquina ni queda guardada.</div>
+
+    <label for="soil-data">Datos de suelo</label>
+    <textarea id="soil-data" placeholder="Mediciones de resistividad de campo, o lo que sepas. Si no tenés nada, el agente te va a preguntar."></textarea>
+
+    <label for="project-requirements">Datos del proyecto</label>
+    <textarea id="project-requirements" placeholder="Corriente de falla, tiempo de despeje, terreno disponible, etc."></textarea>
+
+    <button class="btn-primary" id="start-btn" onclick="startSession()">Iniciar diseño</button>
+    <div class="disclaimer">El resultado final requiere revisión y firma de un ingeniero eléctrico habilitado.</div>
+  </div>
+
+  <div class="panel" id="log-section">
+    <h2>Progreso</h2>
+    <div id="log"></div>
+
+    <div id="question-box">
+      <div id="question-text"></div>
+      <form id="question-form" onsubmit="submitAnswer(event)">
+        <input type="text" id="answer-input" autocomplete="off">
+        <button class="btn-secondary" type="submit">Enviar</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel" id="result-section">
+    <h2>Resultado</h2>
+    <div id="verdict"></div>
+    <div id="report-link"></div>
+  </div>
+
+  <div id="error-box"></div>
+
+</main>
+
+<script>
+let polling = null;
+let renderedLogCount = 0;
+
+const labelMap = {
+  soil_started: {group: "suelo", text: "Agente de suelo iniciado…"},
+  soil_done: {group: "suelo", text: null},
+  designer_started: {group: "disenador", text: null},
+  designer_done: {group: "disenador", text: null},
+  reviewer_started: {group: "revisor", text: null},
+  reviewer_done: {group: "revisor", text: null},
+  approved: {group: "sistema", text: "Propuesta APROBADA por el revisor."},
+  not_resolved: {group: "sistema", text: "No se llegó a una propuesta aprobada dentro del máximo de iteraciones."},
+  report_ready: {group: "sistema", text: "Memoria de cálculo generada."},
+  report_unavailable: {group: "sistema", text: "No se pudo generar la memoria de cálculo (sin verificación real registrada)."},
+};
+
+function labelName(group) {
+  return {suelo: "SUELO", disenador: "DISEÑADOR", revisor: "REVISOR", sistema: "SISTEMA"}[group] || group.toUpperCase();
+}
+
+async function startSession() {
+  const btn = document.getElementById("start-btn");
+  btn.disabled = true;
+  btn.textContent = "Iniciando…";
+  document.getElementById("error-box").style.display = "none";
+
+  const payload = {
+    provider: document.getElementById("provider").value,
+    model: document.getElementById("model").value,
+    api_key: document.getElementById("api-key").value,
+    soil_data: document.getElementById("soil-data").value,
+    project_requirements: document.getElementById("project-requirements").value,
+  };
+
+  const res = await fetch("/start", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    showError(data.error || "Error desconocido al iniciar.");
+    btn.disabled = false;
+    btn.textContent = "Iniciar diseño";
+    return;
+  }
+
+  document.getElementById("log-section").style.display = "block";
+  document.getElementById("log").innerHTML = "";
+  renderedLogCount = 0;
+  polling = setInterval(pollStatus, 1200);
+}
+
+async function pollStatus() {
+  const res = await fetch("/status");
+  const data = await res.json();
+
+  renderLog(data.log);
+
+  const qbox = document.getElementById("question-box");
+  if (data.pending_question) {
+    document.getElementById("question-text").textContent = "🧑‍🔧 " + data.pending_question;
+    qbox.style.display = "block";
+  } else {
+    qbox.style.display = "none";
+  }
+
+  if (data.status === "done") {
+    clearInterval(polling);
+    showResult(data);
+  } else if (data.status === "error") {
+    clearInterval(polling);
+    showError(data.error || "Error desconocido en el pipeline.");
+  }
+}
+
+function renderLog(log) {
+  const el = document.getElementById("log");
+  for (let i = renderedLogCount; i < log.length; i++) {
+    const event = log[i];
+    const info = labelMap[event.type] || {group: "sistema", text: event.type};
+    const text = info.text || event.text || "";
+    const iterTag = event.iteration ? ` (iter. ${event.iteration})` : "";
+
+    const div = document.createElement("div");
+    div.className = "log-entry";
+    div.innerHTML = `<span class="log-label ${info.group}">${labelName(info.group)}${iterTag}</span>` +
+                     `<div class="log-text"></div>`;
+    div.querySelector(".log-text").textContent = text;
+    el.appendChild(div);
+  }
+  renderedLogCount = log.length;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function submitAnswer(evt) {
+  evt.preventDefault();
+  const input = document.getElementById("answer-input");
+  const answer = input.value;
+  input.value = "";
+  document.getElementById("question-box").style.display = "none";
+
+  await fetch("/answer", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({answer}),
+  });
+}
+
+function showResult(data) {
+  document.getElementById("result-section").style.display = "block";
+  const verdictEl = document.getElementById("verdict");
+  const verdict = data.final_verdict || "DESCONOCIDO";
+  verdictEl.textContent = "Veredicto: " + verdict;
+  verdictEl.className = verdict === "APROBADO" ? "aprobado" : "no_resuelto";
+
+  const linkEl = document.getElementById("report-link");
+  if (data.has_report) {
+    linkEl.innerHTML = '<a class="download" href="/report">📄 Descargar memoria de cálculo (.docx)</a>' +
+      '<div class="disclaimer">Recordá: requiere revisión y firma de un ingeniero eléctrico habilitado.</div>';
+  } else {
+    linkEl.innerHTML = '<div class="disclaimer">No se generó memoria de cálculo — revisá el registro de progreso arriba.</div>';
+  }
+
+  document.getElementById("question-box").style.display = "none";
+}
+
+function showError(message) {
+  const box = document.getElementById("error-box");
+  box.textContent = "Error: " + message;
+  box.style.display = "block";
+}
+</script>
+
+</body>
+</html>
