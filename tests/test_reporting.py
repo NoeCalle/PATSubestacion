@@ -162,3 +162,85 @@ def test_report_omits_visualization_section_when_not_provided(tmp_path):
 
     text = full_document_text(output_path)
     assert "Material complementario" not in text
+
+
+def _count_embedded_images(docx_path: str) -> int:
+    """Cuenta las imágenes efectivamente embebidas en el .docx (no solo
+    mencionadas en texto) -- un .docx es un .zip, las imágenes viven
+    en word/media/."""
+    import zipfile
+    with zipfile.ZipFile(docx_path) as z:
+        return len([n for n in z.namelist() if n.startswith("word/media/")])
+
+
+def test_report_embeds_static_view_images(tmp_path):
+    from src.visual.static_plot3d import render_static_views
+    from src.engine.potential_profile import (
+        compute_surface_potential, touch_voltage_field, step_voltage_field,
+    )
+
+    soil, grid, fault, result = sample_uniform_case()
+
+    field = compute_surface_potential(soil, grid, IG=result.IG, margin=5.0, sample_resolution=4.0)
+    touch_field = touch_voltage_field(field.V, gpr_reference=result.GPR)
+    step_field = step_voltage_field(field.X, field.Y, field.V)
+
+    static_paths = render_static_views(
+        field, grid, output_dir=str(tmp_path / "views"),
+        touch_field=touch_field, step_field=step_field,
+    )
+
+    output_path = str(tmp_path / "report_with_images.docx")
+    build_calculation_report(
+        soil, grid, fault, result, output_path,
+        static_view_paths=static_paths,
+    )
+
+    text = full_document_text(output_path)
+    assert "Material complementario" in text
+    assert "Potencial de superficie" in text
+    assert "Tensión de contacto aproximada" in text
+    assert "Tensión de paso aproximada" in text
+
+    # Lo importante: las imágenes deben estar REALMENTE embebidas, no
+    # solo mencionadas en el texto.
+    assert _count_embedded_images(output_path) == 3
+
+
+def test_report_embeds_only_provided_views(tmp_path):
+    """Si solo se pasa la vista de potencial (sin touch/step), el
+    informe no debe mencionar ni intentar embeber las otras."""
+    from src.visual.static_plot3d import render_static_views
+    from src.engine.potential_profile import compute_surface_potential
+
+    soil, grid, fault, result = sample_uniform_case()
+    field = compute_surface_potential(soil, grid, IG=result.IG, margin=5.0, sample_resolution=4.0)
+
+    static_paths = render_static_views(field, grid, output_dir=str(tmp_path / "views"))
+
+    output_path = str(tmp_path / "report_potential_only.docx")
+    build_calculation_report(soil, grid, fault, result, output_path, static_view_paths=static_paths)
+
+    assert _count_embedded_images(output_path) == 1
+    text = full_document_text(output_path)
+    assert "Tensión de contacto aproximada" not in text
+
+
+def test_report_mentions_both_static_images_and_interactive_reference(tmp_path):
+    from src.visual.static_plot3d import render_static_views
+    from src.engine.potential_profile import compute_surface_potential
+
+    soil, grid, fault, result = sample_uniform_case()
+    field = compute_surface_potential(soil, grid, IG=result.IG, margin=5.0, sample_resolution=4.0)
+    static_paths = render_static_views(field, grid, output_dir=str(tmp_path / "views"))
+
+    output_path = str(tmp_path / "report_both.docx")
+    build_calculation_report(
+        soil, grid, fault, result, output_path,
+        static_view_paths=static_paths,
+        visualization_reference="potential_dashboard.html",
+    )
+
+    assert _count_embedded_images(output_path) == 1
+    text = full_document_text(output_path)
+    assert "potential_dashboard.html" in text

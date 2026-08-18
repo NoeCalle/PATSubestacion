@@ -17,7 +17,7 @@ informe "se vea mejor".
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Dict
 
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
@@ -117,13 +117,19 @@ def build_calculation_report(
     output_path: str,
     project_info: Optional[ProjectInfo] = None,
     visualization_reference: Optional[str] = None,
+    static_view_paths: Optional[Dict[str, str]] = None,
 ) -> str:
     """
     Genera la memoria de cálculo en formato .docx.
 
     visualization_reference: ruta o nombre de archivo del dashboard 3D
-      (generado por src/visual/plot3d.py), si existe, para mencionarlo
-      como material complementario. No se embebe (es HTML interactivo).
+      interactivo (generado por src/visual/plot3d.py), si existe, para
+      mencionarlo como material complementario. No se embebe (es HTML
+      interactivo, Word no puede mostrarlo).
+    static_view_paths: dict {"potential": ruta.png, "touch": ruta.png,
+      "step": ruta.png} generado por src/visual/static_plot3d.py --
+      estas SÍ se embeben directamente en el documento como imágenes.
+      Las claves ausentes simplemente no se incluyen.
 
     Devuelve la ruta del archivo generado.
     """
@@ -261,15 +267,33 @@ def build_calculation_report(
             p.add_run(note)
 
     # --- 4. Material complementario ---
-    if visualization_reference:
+    if visualization_reference or static_view_paths:
         doc.add_heading("4. Material complementario", level=1)
         doc.add_paragraph(
-            f"Se generó un dashboard interactivo 3D del perfil de potencial "
-            f"de superficie: {visualization_reference}. Este archivo permite "
-            f"explorar visualmente las zonas de mayor tensión de contacto y "
-            f"de paso, y es complementario a los valores normativos de la "
-            f"sección 2 (que son los que rigen el veredicto)."
+            "El siguiente material es exploratorio/visual -- complementa los "
+            "valores normativos de la sección 2, que son los que rigen el "
+            "veredicto. Se basa en un perfil de potencial calculado con una "
+            "simplificación (corriente uniforme entre segmentos de la malla); "
+            "ver notas de la sección 3 para más detalle sobre esa aproximación."
         )
+
+        view_titles = {
+            "potential": "Potencial de superficie",
+            "touch": "Tensión de contacto aproximada",
+            "step": "Tensión de paso aproximada",
+        }
+        if static_view_paths:
+            for key in ("potential", "touch", "step"):
+                path = static_view_paths.get(key)
+                if path:
+                    doc.add_heading(view_titles[key], level=2)
+                    doc.add_picture(path, width=Cm(15))
+
+        if visualization_reference:
+            doc.add_paragraph(
+                f"También hay disponible una versión interactiva (rotable, con "
+                f"zoom) de estas mismas vistas: {visualization_reference}."
+            )
 
     # --- 5. Firma ---
     doc.add_heading("Revisión y aprobación", level=1)

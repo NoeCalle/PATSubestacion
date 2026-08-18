@@ -106,7 +106,16 @@ examples/     # Casos de ejemplo (inputs/outputs)
   `requirements-web.txt` (Flask), sin ningún SDK de LLM ni API key.
   Corre en el puerto 5050 (distinto del webapp de agentes en el 5000,
   para poder tener los dos abiertos a la vez si querés comparar).
-- **131 tests pasando** (`pytest tests/ -v`).
+- ✅ **Renderizado estático 3D para el informe** (`src/visual/static_plot3d.py`,
+  matplotlib) — genera imágenes PNG (potencial, tensión de contacto,
+  tensión de paso) a partir del mismo perfil de potencial numérico, y
+  `build_calculation_report(..., static_view_paths=...)` las embebe
+  directamente en la memoria de cálculo. Distinto del dashboard
+  interactivo (plotly/HTML): Word no puede mostrar HTML, así que esto
+  usa un camino de renderizado separado para producir imágenes fijas.
+  Verificado visualmente (conversión a PDF + inspección de página).
+  Ver ejemplo actualizado en `examples/generate_report_example.py`.
+- **137 tests pasando** (`pytest tests/ -v`).
 - ⏳ Documentación de flujo (diagrama)
 
 ### Arquitectura de agentes
