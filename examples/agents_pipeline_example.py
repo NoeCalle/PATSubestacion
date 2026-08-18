@@ -24,7 +24,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.agents import AnthropicProvider, OpenAIProvider, run_design_pipeline
+from src.agents import AnthropicProvider, OpenAIProvider, run_design_pipeline, ProjectInfo
 
 
 def main():
@@ -68,7 +68,19 @@ def main():
 
     print(f"Corriendo pipeline con proveedor: {args.provider}\n")
 
-    session = run_design_pipeline(provider, soil_data, project_requirements)
+    output_dir = os.path.join(os.path.dirname(__file__), "output")
+    os.makedirs(output_dir, exist_ok=True)
+    report_path = os.path.join(output_dir, "memoria_de_calculo_agentes.docx")
+
+    session = run_design_pipeline(
+        provider, soil_data, project_requirements,
+        report_output_path=report_path,
+        project_info=ProjectInfo(
+            project_name="Subestación de ejemplo (pipeline de agentes)",
+            prepared_by=f"Sistema de agentes IEEE 80 ({args.provider})",
+        ),
+        visualization_reference="Generá el dashboard 3D por separado con examples/visualize_potential_3d.py",
+    )
 
     print("=" * 70)
     print("RESULTADO DEL AGENTE DE SUELO")
@@ -88,9 +100,20 @@ def main():
     print("\n" + "=" * 70)
     print(f"VEREDICTO FINAL DEL PIPELINE: {session.final_verdict}")
     print("=" * 70)
+
+    if session.report_path:
+        print(f"\n📄 Memoria de cálculo generada automáticamente en: {session.report_path}")
+    else:
+        print(
+            "\n⚠️ No se pudo generar la memoria de cálculo -- ningún agente "
+            "llegó a llamar la herramienta de verificación del motor. "
+            "Revisá el texto del diseñador/revisor arriba para ver qué pasó."
+        )
+
     print(
-        "\n⚠️ Recordatorio: este veredicto es un insumo para el ingeniero "
-        "eléctrico habilitado que debe revisar y firmar el informe final."
+        "\n⚠️ Recordatorio: este veredicto (y el documento, si se generó) es "
+        "un insumo para el ingeniero eléctrico habilitado que debe revisar "
+        "y firmar el informe final."
     )
 
 

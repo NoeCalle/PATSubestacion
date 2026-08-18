@@ -47,7 +47,6 @@ examples/     # Casos de ejemplo (inputs/outputs)
   dashboard HTML autocontenido con selector entre potencial, tensión de
   contacto y tensión de paso, con la malla superpuesta como referencia
   espacial. Ver ejemplo en `examples/visualize_potential_3d.py`.
-- **69 tests pasando** (`pytest tests/ -v`).
 - ✅ **Sistema de agentes** (`src/agents/`) — agnóstico de proveedor
   (Anthropic o OpenAI, vía un adaptador común `LLMProvider`).
   Coordinador (orquestador Python plano, no LLM) que corre:
@@ -62,22 +61,32 @@ examples/     # Casos de ejemplo (inputs/outputs)
   completos, veredicto, notas/advertencias íntegras (nunca se ocultan), y
   espacio de firma del ingeniero responsable. Ver ejemplo en
   `examples/generate_report_example.py`.
+- ✅ **Integración agentes → reportes** (`src/agents/report_integration.py`) —
+  `run_design_pipeline(..., report_output_path=...)` genera la memoria
+  de cálculo automáticamente al finalizar, extraída de la última tool
+  call de verificación REAL ejecutada (prioriza al revisor sobre el
+  diseñador, nunca texto del LLM). Si ningún agente llegó a llamar la
+  herramienta de cálculo, no genera un documento — `session.report_path`
+  queda en `None` en vez de fabricar un informe con datos inventados.
+- **79 tests pasando** (`pytest tests/ -v`).
 - ⏳ Documentación de flujo (diagrama)
 
 ### Arquitectura de agentes
 
 ```
 src/agents/
-├── providers/           # Adaptadores de proveedor (Anthropic, OpenAI)
-│   ├── base.py           # Interfaz común LLMProvider
+├── providers/              # Adaptadores de proveedor (Anthropic, OpenAI)
+│   ├── base.py              # Interfaz común LLMProvider
 │   ├── anthropic_provider.py
 │   └── openai_provider.py
-├── tools.py              # Envuelve el motor de cálculo como tools con JSON Schema
-├── base_agent.py         # Loop de tool-calling genérico
-├── soil_agent.py          # Interpreta datos de resistividad
-├── designer_agent.py      # Propone y verifica geometrías de malla
-├── reviewer_agent.py      # Auditoría independiente (QA interno)
-└── coordinator.py         # Orquesta el flujo (Python plano, no LLM)
+├── tools.py                 # Envuelve el motor de cálculo como tools con JSON Schema
+├── base_agent.py            # Loop de tool-calling genérico
+├── session.py                # Estado del pipeline (DesignSession)
+├── soil_agent.py              # Interpreta datos de resistividad
+├── designer_agent.py          # Propone y verifica geometrías de malla
+├── reviewer_agent.py          # Auditoría independiente (QA interno)
+├── coordinator.py             # Orquesta el flujo (Python plano, no LLM)
+└── report_integration.py      # Puente hacia src/reporting (extrae la última tool call real)
 ```
 
 **Principio de diseño**: ningún agente calcula tensiones de paso/contacto

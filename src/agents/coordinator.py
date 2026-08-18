@@ -1,6 +1,8 @@
 """
 Coordinador del pipeline de diseño: soil_agent -> designer_agent ->
 reviewer_agent, con loop de retroalimentación si el revisor rechaza.
+Opcionalmente genera la memoria de cálculo en Word automáticamente al
+finalizar.
 
 Es un orquestador de Python plano (NO un agente LLM) -- la secuencia y
 los reintentos son lógica determinística y auditable; los LLMs se usan
@@ -10,32 +12,15 @@ de decisión que no debería depender de que un modelo "razone bien"
 sobre cuándo reintentar -- es una regla de negocio simple y fija.
 """
 
-from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
-from .base_agent import AgentResult
+from .session import DesignSession
 from .soil_agent import create_soil_agent
 from .designer_agent import create_designer_agent
 from .reviewer_agent import create_reviewer_agent
+from .report_integration import build_report_from_session
 from .providers.base import LLMProvider
-
-
-@dataclass
-class DesignSession:
-    soil_result: Optional[AgentResult] = None
-    designer_results: List[AgentResult] = field(default_factory=list)
-    reviewer_results: List[AgentResult] = field(default_factory=list)
-    final_verdict: str = "NO_INICIADO"  # APROBADO | NO_RESUELTO | NO_INICIADO
-    iterations: int = 0
-
-    @property
-    def final_design(self) -> Optional[str]:
-        """Texto de la última propuesta del diseñador (la vigente al cierre)."""
-        return self.designer_results[-1].final_text if self.designer_results else None
-
-    @property
-    def final_review(self) -> Optional[str]:
-        return self.reviewer_results[-1].final_text if self.reviewer_results else None
+from ..reporting import ProjectInfo
 
 
 def run_design_pipeline(
@@ -43,6 +28,9 @@ def run_design_pipeline(
     soil_data_description: str,
     project_requirements: str,
     max_review_iterations: int = 3,
+    report_output_path: Optional[str] = None,
+    project_info: Optional[ProjectInfo] = None,
+    visualization_reference: Optional[str] = None,
 ) -> DesignSession:
     """
     Ejecuta el flujo completo: interpretación de suelo -> diseño ->
@@ -54,10 +42,19 @@ def run_design_pipeline(
       interpretada).
     project_requirements: descripción del proyecto (corriente de falla,
       tiempo de despeje, dimensiones disponibles del terreno, etc.)
+    report_output_path: si se especifica, al finalizar el pipeline
+      (apruebe o no) se genera automáticamente la memoria de cálculo
+      en Word a partir de la última verificación REAL ejecutada (no
+      de texto del LLM) -- ver report_integration.py. La ruta queda
+      en session.report_path (None si no se pudo generar, por ejemplo
+      si ningún agente llegó a llamar la herramienta de cálculo).
+    project_info / visualization_reference: se pasan directo al
+      generador de reportes si report_output_path está definido.
 
     ⚠️ El resultado de esta función (incluso si final_verdict ==
-    "APROBADO") es un insumo para el ingeniero que revisa y firma el
-    informe -- no es una aprobación normativa final por sí sola.
+    "APROBADO", e incluso si se generó el .docx) es un insumo para el
+    ingeniero que revisa y firma el informe -- no es una aprobación
+    normativa final por sí sola.
     """
     session = DesignSession()
 
@@ -91,6 +88,7 @@ def run_design_pipeline(
 
         if reviewer_result.final_text.strip().upper().startswith("APROBADO"):
             session.final_verdict = "APROBADO"
+            _maybe_generate_report(session, report_output_path, project_info, visualization_reference)
             return session
 
         # Realimentación explícita al diseñador para la siguiente iteración
@@ -103,4 +101,20 @@ def run_design_pipeline(
         )
 
     session.final_verdict = "NO_RESUELTO"
+    _maybe_generate_report(session, report_output_path, project_info, visualization_reference)
     return session
+
+
+def _maybe_generate_report(
+    session: DesignSession,
+    report_output_path: Optional[str],
+    project_info: Optional[ProjectInfo],
+    visualization_reference: Optional[str],
+) -> None:
+    if not report_output_path:
+        return
+    session.report_path = build_report_from_session(
+        session, report_output_path,
+        project_info=project_info,
+        visualization_reference=visualization_reference,
+    )

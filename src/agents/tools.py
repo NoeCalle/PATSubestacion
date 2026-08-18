@@ -14,15 +14,16 @@ resultado como dict serializable a JSON. Este es el punto central que
 garantiza que ningún agente "calcule de memoria" una tensión de paso.
 """
 
+import json
 from dataclasses import asdict
-from typing import Dict, Any, Callable, List, Optional
+from typing import Dict, Any, Callable, List, Optional, Tuple, Union
 
-from ..engine.models import SoilModel, GridGeometry, FaultData, TwoLayerSoilModel
+from ..engine.models import SoilModel, GridGeometry, FaultData, TwoLayerSoilModel, DesignResult
 from ..engine.design_check import run_design_check, run_design_check_two_layer
 from ..engine.soil_two_layer import fit_two_layer_model
 
 
-def _build_grid(kwargs: Dict[str, Any]) -> GridGeometry:
+def build_grid_from_params(kwargs: Dict[str, Any]) -> GridGeometry:
     return GridGeometry(
         Lx=kwargs["Lx"], Ly=kwargs["Ly"], h=kwargs["h"], d=kwargs["d"],
         n_x=kwargs["n_x"], n_y=kwargs["n_y"],
@@ -31,7 +32,7 @@ def _build_grid(kwargs: Dict[str, Any]) -> GridGeometry:
     )
 
 
-def _build_fault(kwargs: Dict[str, Any]) -> FaultData:
+def build_fault_from_params(kwargs: Dict[str, Any]) -> FaultData:
     return FaultData(
         If_sym=kwargs["If_sym"], Sf=kwargs.get("Sf", 1.0),
         tf=kwargs.get("tf", 0.5), ts=kwargs.get("ts", 0.5),
@@ -40,10 +41,49 @@ def _build_fault(kwargs: Dict[str, Any]) -> FaultData:
     )
 
 
+def build_soil_from_params(tool_name: str, kwargs: Dict[str, Any]) -> Union[SoilModel, TwoLayerSoilModel]:
+    if tool_name == "run_design_check_two_layer":
+        return TwoLayerSoilModel(
+            rho1=kwargs["rho1"], rho2=kwargs["rho2"], h1=kwargs["h1"],
+            rho_s=kwargs.get("rho_s"), h_s=kwargs.get("h_s", 0.0),
+        )
+    return SoilModel(rho=kwargs["rho"], rho_s=kwargs.get("rho_s"), h_s=kwargs.get("h_s", 0.0))
+
+
+# Nombres de las tools que representan una verificación de diseño completa
+# (las únicas de las que tiene sentido reconstruir un informe).
+DESIGN_CHECK_TOOL_NAMES = {"run_design_check_uniform", "run_design_check_two_layer"}
+
+
+def reconstruct_design_check_call(
+    tool_name: str, params: Dict[str, Any], result_json: str
+) -> Tuple[Union[SoilModel, TwoLayerSoilModel], GridGeometry, FaultData, DesignResult]:
+    """
+    Reconstruye los objetos de entrada (soil, grid, fault) y el
+    DesignResult a partir de una tool call YA EJECUTADA por un agente
+    (sus parámetros de entrada + el resultado que efectivamente
+    devolvió el motor). No vuelve a calcular nada -- solo repone la
+    forma estructurada a partir de lo que ya corrió.
+
+    Usado por src/agents/report_integration.py para generar la memoria
+    de cálculo a partir de lo que un agente realmente verificó, nunca
+    a partir de texto generado por el LLM.
+    """
+    if tool_name not in DESIGN_CHECK_TOOL_NAMES:
+        raise ValueError(f"'{tool_name}' no es una tool de verificación de diseño")
+
+    soil = build_soil_from_params(tool_name, params)
+    grid = build_grid_from_params(params)
+    fault = build_fault_from_params(params)
+    result = DesignResult(**json.loads(result_json))
+
+    return soil, grid, fault, result
+
+
 def _design_check_uniform(**kwargs) -> Dict[str, Any]:
     soil = SoilModel(rho=kwargs["rho"], rho_s=kwargs.get("rho_s"), h_s=kwargs.get("h_s", 0.0))
-    grid = _build_grid(kwargs)
-    fault = _build_fault(kwargs)
+    grid = build_grid_from_params(kwargs)
+    fault = build_fault_from_params(kwargs)
     result = run_design_check(soil, grid, fault, body_kg=kwargs.get("body_kg", 50))
     return asdict(result)
 
@@ -53,8 +93,8 @@ def _design_check_two_layer(**kwargs) -> Dict[str, Any]:
         rho1=kwargs["rho1"], rho2=kwargs["rho2"], h1=kwargs["h1"],
         rho_s=kwargs.get("rho_s"), h_s=kwargs.get("h_s", 0.0),
     )
-    grid = _build_grid(kwargs)
-    fault = _build_fault(kwargs)
+    grid = build_grid_from_params(kwargs)
+    fault = build_fault_from_params(kwargs)
     result = run_design_check_two_layer(soil, grid, fault, body_kg=kwargs.get("body_kg", 50))
     return asdict(result)
 
