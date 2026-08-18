@@ -16,6 +16,7 @@ Un repo descargable, agnóstico de proveedor de LLM (funciona con tu propia cuen
 ```
 src/
   engine/     # Motor de cálculo IEEE 80 (Python puro, testeado, sin LLM)
+  visual/     # Visualización 3D interactiva (plotly) — solo renderiza, no calcula
   agents/     # Definición de agentes y orquestación (multi-proveedor)
 docs/         # Documentación técnica y de arquitectura
 tests/        # Tests del motor de cálculo
@@ -34,7 +35,6 @@ examples/     # Casos de ejemplo (inputs/outputs)
   desde mediciones de campo, y resistividad efectiva para diseño
   (aproximación de ingeniería, documentada como tal — ver docstring).
   Ver ejemplo en `examples/two_layer_soil_example.py`.
-- 45 tests pasando (`pytest tests/ -v`).
 - ✅ **Perfil de potencial en grilla** (`src/engine/potential_profile.py`) —
   campo de potencial de superficie numérico (discretización de electrodos +
   método de imágenes), base para el gráfico 3D. Usa una simplificación
@@ -42,10 +42,15 @@ examples/     # Casos de ejemplo (inputs/outputs)
   exploratoria/visual, el valor que rige el informe sigue siendo el
   Em/Es normativo de fórmula cerrada. Ver ejemplo en
   `examples/potential_profile_example.py`.
-- ⏳ Módulo de visualización 3D (`src/visual/`) sobre este perfil
+- ✅ **Visualización 3D interactiva** (`src/visual/plot3d.py`, plotly) —
+  dashboard HTML autocontenido con selector entre potencial, tensión de
+  contacto y tensión de paso, con la malla superpuesta como referencia
+  espacial. Ver ejemplo en `examples/visualize_potential_3d.py`.
+- **50 tests pasando** (`pytest tests/ -v`).
 - ⏳ Stack técnico de orquestación multi-agente
 - ⏳ Definición de roles/prompts de cada agente (coordinador, suelo,
-  diseñador, revisor, visualización 3D, reportes)
+  diseñador, revisor, reportes)
+- ⏳ Módulo de reportes (memoria de cálculo)
 - ⏳ Documentación de flujo (diagrama)
 
 ### Cómo correr los tests
@@ -61,6 +66,7 @@ pytest tests/ -v
 python examples/basic_grid_example.py           # suelo uniforme
 python examples/two_layer_soil_example.py       # suelo de dos capas (desde datos de campo)
 python examples/potential_profile_example.py    # perfil de potencial en grilla
+python examples/visualize_potential_3d.py       # dashboard 3D interactivo (genera examples/output/*.html)
 ```
 
 > **Nota sobre el modelo de dos capas**: la conversión de un modelo de dos
