@@ -34,8 +34,15 @@ examples/     # Casos de ejemplo (inputs/outputs)
   desde mediciones de campo, y resistividad efectiva para diseño
   (aproximación de ingeniería, documentada como tal — ver docstring).
   Ver ejemplo en `examples/two_layer_soil_example.py`.
-- 34 tests pasando (`pytest tests/ -v`).
-- ⏳ Perfil de potencial en grilla completa (base para gráfico 3D)
+- 45 tests pasando (`pytest tests/ -v`).
+- ✅ **Perfil de potencial en grilla** (`src/engine/potential_profile.py`) —
+  campo de potencial de superficie numérico (discretización de electrodos +
+  método de imágenes), base para el gráfico 3D. Usa una simplificación
+  documentada (corriente uniforme entre segmentos) — es una herramienta
+  exploratoria/visual, el valor que rige el informe sigue siendo el
+  Em/Es normativo de fórmula cerrada. Ver ejemplo en
+  `examples/potential_profile_example.py`.
+- ⏳ Módulo de visualización 3D (`src/visual/`) sobre este perfil
 - ⏳ Stack técnico de orquestación multi-agente
 - ⏳ Definición de roles/prompts de cada agente (coordinador, suelo,
   diseñador, revisor, visualización 3D, reportes)
@@ -51,8 +58,9 @@ pytest tests/ -v
 ### Cómo correr los ejemplos
 
 ```bash
-python examples/basic_grid_example.py       # suelo uniforme
-python examples/two_layer_soil_example.py   # suelo de dos capas (desde datos de campo)
+python examples/basic_grid_example.py           # suelo uniforme
+python examples/two_layer_soil_example.py       # suelo de dos capas (desde datos de campo)
+python examples/potential_profile_example.py    # perfil de potencial en grilla
 ```
 
 > **Nota sobre el modelo de dos capas**: la conversión de un modelo de dos
