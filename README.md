@@ -18,6 +18,7 @@ src/
   engine/     # Motor de cálculo IEEE 80 (Python puro, testeado, sin LLM)
   visual/     # Visualización 3D interactiva (plotly) — solo renderiza, no calcula
   reporting/  # Memoria de cálculo en Word (python-docx) — solo formatea, no calcula
+  cli/        # Modelador determinista (sin LLM) — solo requiere requirements.txt
   agents/     # Sistema de agentes (coordinador, suelo, diseñador, revisor) — agnóstico de proveedor LLM
   webapp/     # Interfaz web local (Flask) — usa la interfaz CLI o web indistintamente
 docs/         # Documentación técnica y de arquitectura
@@ -86,9 +87,16 @@ examples/     # Casos de ejemplo (inputs/outputs)
   `WebHumanInterface`) para que el mismo agente funcione con cualquiera
   de las dos interfaces sin cambios. La API key nunca sale de tu máquina
   (va del navegador a este mismo servidor local).
-- **94 tests pasando** (`pytest tests/ -v`).
+- ✅ **Modelador determinista** (`src/cli/design_wizard.py`) — asistente
+  de consola sin ningún LLM de por medio: te pregunta geometría,
+  resistividad (uniforme o ajuste de dos capas desde mediciones de
+  Wenner) y datos de falla con `input()` normal de Python, y llama
+  directo a `src/engine` y `src/reporting`. Solo necesita
+  `requirements.txt` — sin API key, sin `requirements-agents.txt`.
+  Valida cada respuesta y vuelve a preguntar si el valor no es válido.
+  Si el diseño no cumple, te ofrece ajustar la geometría e iterar.
+- **119 tests pasando** (`pytest tests/ -v`).
 - ⏳ Documentación de flujo (diagrama)
-- ⏳ Modelador determinista (CLI sin IA, formulario paso a paso) — pendiente, discutido como "Producto A"
 
 ### Arquitectura de agentes
 
@@ -114,6 +122,19 @@ src/agents/
 coordinador tampoco es un LLM: la secuencia y los reintentos son lógica
 Python fija y auditable, no una decisión que dependa de que un modelo
 "razone bien".
+
+### Cómo correr el modelador determinista (sin LLM, sin API key)
+
+```bash
+pip install -r requirements.txt
+python src/cli/design_wizard.py
+```
+
+Te va a preguntar todo paso a paso por consola: modelo de suelo,
+geometría de la malla, datos de falla. Cada respuesta se valida (si
+escribís algo inválido, te vuelve a preguntar). Si el diseño no
+cumple, te ofrece ajustar la geometría y volver a calcular. Al final,
+opcionalmente genera la memoria de cálculo en Word.
 
 ### Cómo correr la interfaz web local
 
