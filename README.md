@@ -15,12 +15,13 @@ Un repo descargable, agnóstico de proveedor de LLM (funciona con tu propia cuen
 
 ```
 src/
-  engine/     # Motor de cálculo IEEE 80 (Python puro, testeado, sin LLM)
-  visual/     # Visualización 3D interactiva (plotly) — solo renderiza, no calcula
-  reporting/  # Memoria de cálculo en Word (python-docx) — solo formatea, no calcula
-  cli/        # Modelador determinista (sin LLM) — solo requiere requirements.txt
-  agents/     # Sistema de agentes (coordinador, suelo, diseñador, revisor) — agnóstico de proveedor LLM
-  webapp/     # Interfaz web local (Flask) — usa la interfaz CLI o web indistintamente
+  engine/         # Motor de cálculo IEEE 80 (Python puro, testeado, sin LLM)
+  visual/         # Visualización 3D interactiva (plotly) — solo renderiza, no calcula
+  reporting/      # Memoria de cálculo en Word (python-docx) — solo formatea, no calcula
+  cli/            # Modelador determinista por consola (sin LLM) — solo requiere requirements.txt
+  webapp_wizard/  # Modelador determinista como web (sin LLM) — sincrónico, sin hilos
+  agents/         # Sistema de agentes (coordinador, suelo, diseñador, revisor) — agnóstico de proveedor LLM
+  webapp/         # Interfaz web del sistema de agentes (Flask) — usa la interfaz CLI o web indistintamente
 docs/         # Documentación técnica y de arquitectura
 tests/        # Tests del motor de cálculo
 examples/     # Casos de ejemplo (inputs/outputs)
@@ -95,7 +96,17 @@ examples/     # Casos de ejemplo (inputs/outputs)
   `requirements.txt` — sin API key, sin `requirements-agents.txt`.
   Valida cada respuesta y vuelve a preguntar si el valor no es válido.
   Si el diseño no cumple, te ofrece ajustar la geometría e iterar.
-- **119 tests pasando** (`pytest tests/ -v`).
+- ✅ **Interfaz web del modelador determinista** (`src/webapp_wizard/`,
+  Flask) — la versión HTML del Producto A: mismo formulario que el CLI
+  pero como página web, con secciones condicionales (tipo de suelo,
+  varillas, capa superficial) y filas dinámicas para cargar mediciones
+  de Wenner. Completamente sincrónico (sin hilos ni sondeo, porque acá
+  no hay ningún LLM bloqueante) — cada cálculo responde al instante.
+  Cero dependencia de `src/agents`: solo necesita `requirements.txt` +
+  `requirements-web.txt` (Flask), sin ningún SDK de LLM ni API key.
+  Corre en el puerto 5050 (distinto del webapp de agentes en el 5000,
+  para poder tener los dos abiertos a la vez si querés comparar).
+- **131 tests pasando** (`pytest tests/ -v`).
 - ⏳ Documentación de flujo (diagrama)
 
 ### Arquitectura de agentes
@@ -135,6 +146,20 @@ geometría de la malla, datos de falla. Cada respuesta se valida (si
 escribís algo inválido, te vuelve a preguntar). Si el diseño no
 cumple, te ofrece ajustar la geometría y volver a calcular. Al final,
 opcionalmente genera la memoria de cálculo en Word.
+
+### Cómo correr la interfaz web del modelador determinista (sin LLM)
+
+```bash
+pip install -r requirements.txt -r requirements-web.txt
+python src/webapp_wizard/app.py
+```
+
+Abrí `http://127.0.0.1:5050` en tu navegador. Es el mismo modelador de
+arriba, como formulario web: completás los campos, hacés clic en
+"Calcular diseño", y ves el resultado al instante (sin esperas, sin
+threads, no hay ningún LLM de por medio). Podés ajustar los campos y
+volver a calcular las veces que quieras, y descargar la memoria de
+cálculo en Word al final.
 
 ### Cómo correr la interfaz web local
 

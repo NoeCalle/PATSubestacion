@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelador de Puesta a Tierra — IEEE 80</title>
+<style>
+  :root {
+    --bg-panel: #0F1B24;
+    --bg-paper: #F7F5F0;
+    --bg-paper-raised: #FFFFFF;
+    --text-light: #E8ECEE;
+    --text-light-dim: #93A5AC;
+    --text-dark: #1A2530;
+    --text-dark-dim: #5B6B72;
+    --accent: #F2A93C;
+    --accent-dim: #B9822C;
+    --steel: #3E7C8C;
+    --success: #3F8F5F;
+    --danger: #B0453E;
+    --border: #24363F;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--sans); background: var(--bg-paper); color: var(--text-dark); min-height: 100vh; }
+
+  header { background: var(--bg-panel); color: var(--text-light); padding: 28px 32px; display: flex; align-items: center; gap: 16px; border-bottom: 3px solid var(--accent); }
+  header h1 { font-family: var(--mono); font-size: 1.2rem; font-weight: 600; margin: 0; }
+  header p { font-family: var(--mono); font-size: 0.78rem; color: var(--text-light-dim); margin: 4px 0 0 0; }
+  .grid-icon circle.node { fill: var(--steel); }
+  .grid-icon circle.pulse { fill: var(--accent); }
+
+  main { max-width: 880px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  .panel { background: var(--bg-paper-raised); border: 1px solid #E3DFD3; border-radius: 6px; padding: 24px 28px; margin-bottom: 24px; }
+  .panel h2 { font-family: var(--mono); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dark-dim); margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px; }
+  .panel h2::before { content: ""; display: inline-block; width: 8px; height: 8px; background: var(--accent); border-radius: 1px; }
+  .panel h3 { font-size: 0.88rem; color: var(--text-dark); margin: 20px 0 10px 0; }
+
+  label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; margin-top: 14px; }
+  .field-hint { font-size: 0.76rem; color: var(--text-dark-dim); margin-top: 3px; }
+
+  select, input[type="text"], input[type="number"] {
+    width: 100%; padding: 9px 11px; border: 1px solid #D8D2C2; border-radius: 4px;
+    background: var(--bg-paper); font-family: var(--sans); font-size: 0.88rem; color: var(--text-dark);
+  }
+  select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .radio-group { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .radio-option { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 500; }
+  .radio-option input { width: auto; }
+
+  .checkbox-line { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 0.88rem; font-weight: 600; }
+  .checkbox-line input { width: auto; }
+
+  .conditional { display: none; padding: 14px 16px; margin-top: 10px; background: #FAF8F2; border-left: 3px solid var(--steel); border-radius: 3px; }
+  .conditional.visible { display: block; }
+
+  #wenner-rows table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  #wenner-rows th { text-align: left; font-size: 0.76rem; color: var(--text-dark-dim); font-weight: 600; padding-bottom: 4px; }
+  #wenner-rows td { padding: 3px 6px 3px 0; }
+  #wenner-rows input { padding: 6px 8px; }
+  .btn-remove-row { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.9rem; padding: 4px 8px; }
+  .btn-add-row { background: var(--steel); color: white; border: none; border-radius: 4px; padding: 7px 14px; font-size: 0.82rem; font-weight: 600; cursor: pointer; margin-top: 8px; }
+
+  button.btn-primary { font-family: var(--sans); font-weight: 700; font-size: 0.95rem; padding: 13px 24px; border-radius: 4px; border: none; cursor: pointer; background: var(--accent); color: #201203; margin-top: 26px; }
+  button.btn-primary:hover { background: var(--accent-dim); }
+
+  .disclaimer { font-size: 0.78rem; color: var(--text-dark-dim); margin-top: 10px; }
+
+  .error-box { background: #FBEAE8; color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 14px 18px; font-size: 0.88rem; margin-bottom: 24px; }
+
+  .badge { display: inline-block; font-family: var(--mono); font-weight: 700; padding: 2px 10px; border-radius: 3px; font-size: 0.8rem; }
+  .badge.ok { background: #E6F2EA; color: var(--success); }
+  .badge.fail { background: #FBEAE8; color: var(--danger); }
+
+  #results table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+  #results td { padding: 6px 4px; font-size: 0.88rem; border-bottom: 1px solid #EEEAE0; }
+  #results td.label { color: var(--text-dark-dim); }
+  #results td.value { font-family: var(--mono); font-weight: 600; text-align: right; }
+
+  #verdict-banner { font-family: var(--mono); font-size: 1.1rem; font-weight: 700; padding: 14px 18px; border-radius: 6px; margin-bottom: 18px; }
+  #verdict-banner.ok { background: #E6F2EA; color: var(--success); }
+  #verdict-banner.fail { background: #FBEAE8; color: var(--danger); }
+
+  .notes-list { font-size: 0.85rem; color: var(--text-dark-dim); padding-left: 18px; }
+  .notes-list li { margin-bottom: 6px; }
+
+  button.btn-secondary { background: var(--steel); color: white; border: none; border-radius: 4px; padding: 12px 20px; font-weight: 600; font-size: 0.88rem; cursor: pointer; margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="grid-icon" width="40" height="40" viewBox="0 0 40 40">
+    <g stroke="#3E7C8C" stroke-width="1.5" fill="none">
+      <line x1="6" y1="6" x2="6" y2="34"/><line x1="20" y1="6" x2="20" y2="34"/><line x1="34" y1="6" x2="34" y2="34"/>
+      <line x1="6" y1="6" x2="34" y2="6"/><line x1="6" y1="20" x2="34" y2="20"/><line x1="6" y1="34" x2="34" y2="34"/>
+    </g>
+    <circle class="node" cx="6" cy="6" r="2.5"/><circle class="node" cx="20" cy="6" r="2.5"/><circle class="node" cx="34" cy="6" r="2.5"/>
+    <circle class="node" cx="6" cy="34" r="2.5"/><circle class="node" cx="20" cy="34" r="2.5"/><circle class="node" cx="34" cy="34" r="2.5"/>
+    <circle class="node" cx="6" cy="20" r="2.5"/><circle class="node" cx="34" cy="20" r="2.5"/>
+    <circle class="pulse" cx="20" cy="20" r="4"/>
+  </svg>
+  <div>
+    <h1>Modelador de Puesta a Tierra — IEEE 80</h1>
+    <p>Sin cuenta de IA · cálculo directo con el motor normativo</p>
+  </div>
+</header>
+
+<main>
+
+{% if error %}
+  <div class="error-box"><strong>No se pudo calcular:</strong> {{ error }}</div>
+{% endif %}
+
+<form method="POST" action="/calculate" id="wizard-form">
+
+  <div class="panel">
+    <h2>Modelo de suelo</h2>
+
+    <div class="radio-group">
+      <label class="radio-option">
+        <input type="radio" name="soil_type" value="uniform" onclick="updateSoilFields()"
+               {% if not form or form.get('soil_type', 'uniform') == 'uniform' %}checked{% endif %}>
+        Un solo valor de resistividad (suelo uniforme)
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="soil_type" value="two_layer_known" onclick="updateSoilFields()"
+               {% if form and form.get('soil_type') == 'two_layer_known' %}checked{% endif %}>
+        Ya conozco ρ1, ρ2 y h1 de un modelo de dos capas
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="soil_type" value="two_layer_wenner" onclick="updateSoilFields()"
+               {% if form and form.get('soil_type') == 'two_layer_wenner' %}checked{% endif %}>
+        Tengo mediciones de campo (ensayo de Wenner) para ajustar dos capas
+      </label>
+    </div>
+
+    <div id="soil-uniform" class="conditional">
+      <label for="rho">Resistividad del suelo (Ω·m)</label>
+      <input type="number" step="any" name="rho" id="rho" value="{{ form.get('rho', '') if form else '' }}">
+    </div>
+
+    <div id="soil-known" class="conditional">
+      <div class="row3">
+        <div><label for="rho1">ρ1 — capa superior (Ω·m)</label><input type="number" step="any" name="rho1" id="rho1" value="{{ form.get('rho1', '') if form else '' }}"></div>
+        <div><label for="rho2">ρ2 — capa inferior (Ω·m)</label><input type="number" step="any" name="rho2" id="rho2" value="{{ form.get('rho2', '') if form else '' }}"></div>
+        <div><label for="h1">h1 — espesor capa superior (m)</label><input type="number" step="any" name="h1" id="h1" value="{{ form.get('h1', '') if form else '' }}"></div>
+      </div>
+    </div>
+
+    <div id="soil-wenner" class="conditional">
+      <div class="field-hint">Mínimo 3 mediciones a distintos espaciamientos.</div>
+      <div id="wenner-rows">
+        <table>
+          <thead><tr><th>Espaciamiento a (m)</th><th>Resistividad medida (Ω·m)</th><th></th></tr></thead>
+          <tbody id="wenner-tbody"></tbody>
+        </table>
+      </div>
+      <button type="button" class="btn-add-row" onclick="addWennerRow()">+ Agregar medición</button>
+    </div>
+
+    <label class="checkbox-line">
+      <input type="checkbox" name="use_surface_layer" id="use_surface_layer" onclick="updateSoilFields()"
+             {% if form and form.get('use_surface_layer') == 'on' %}checked{% endif %}>
+      Usar capa superficial de grava / material aislante
+    </label>
+    <div id="surface-layer-fields" class="conditional">
+      <div class="row2">
+        <div><label for="rho_s">Resistividad de superficie (Ω·m)</label><input type="number" step="any" name="rho_s" id="rho_s" value="{{ form.get('rho_s', '') if form else '' }}"></div>
+        <div><label for="h_s">Espesor de superficie (m)</label><input type="number" step="any" name="h_s" id="h_s" value="{{ form.get('h_s', '0.1') if form else '0.1' }}"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Geometría de la malla</h2>
+    <div class="row2">
+      <div><label for="Lx">Largo del terreno en X (m)</label><input type="number" step="any" name="Lx" id="Lx" value="{{ form.get('Lx', '') if form else '' }}"></div>
+      <div><label for="Ly">Largo del terreno en Y (m)</label><input type="number" step="any" name="Ly" id="Ly" value="{{ form.get('Ly', '') if form else '' }}"></div>
+    </div>
+    <div class="row2">
+      <div><label for="h">Profundidad de enterramiento (m)</label><input type="number" step="any" name="h" id="h" value="{{ form.get('h', '0.5') if form else '0.5' }}"></div>
+      <div><label for="d">Diámetro del conductor (m)</label><input type="number" step="any" name="d" id="d" value="{{ form.get('d', '0.01') if form else '0.01' }}"></div>
+    </div>
+    <div class="row2">
+      <div><label for="n_x">Conductores paralelos en X</label><input type="number" name="n_x" id="n_x" value="{{ form.get('n_x', '5') if form else '5' }}"></div>
+      <div><label for="n_y">Conductores paralelos en Y</label><input type="number" name="n_y" id="n_y" value="{{ form.get('n_y', '5') if form else '5' }}"></div>
+    </div>
+
+    <label class="checkbox-line">
+      <input type="checkbox" name="use_rods" id="use_rods" onclick="updateSoilFields()"
+             {% if not form or form.get('use_rods') == 'on' %}checked{% endif %}>
+      Usar varillas de puesta a tierra
+    </label>
+    <div id="rods-fields" class="conditional">
+      <div class="row3">
+        <div><label for="n_rods">Número de varillas</label><input type="number" name="n_rods" id="n_rods" value="{{ form.get('n_rods', '4') if form else '4' }}"></div>
+        <div><label for="L_rod">Longitud de cada varilla (m)</label><input type="number" step="any" name="L_rod" id="L_rod" value="{{ form.get('L_rod', '3.0') if form else '3.0' }}"></div>
+        <div>
+          <label class="checkbox-line" style="margin-top: 30px;">
+            <input type="checkbox" name="rods_on_perimeter"
+                   {% if not form or form.get('rods_on_perimeter') == 'on' %}checked{% endif %}>
+            En el perímetro/esquinas
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Datos de falla</h2>
+    <div class="row2">
+      <div><label for="If_sym">Corriente de falla simétrica (A)</label><input type="number" step="any" name="If_sym" id="If_sym" value="{{ form.get('If_sym', '') if form else '' }}"></div>
+      <div><label for="Sf">Factor de división de corriente Sf</label><input type="number" step="any" name="Sf" id="Sf" value="{{ form.get('Sf', '1.0') if form else '1.0' }}"></div>
+    </div>
+    <div class="row3">
+      <div><label for="tf">Duración de falla (s)</label><input type="number" step="any" name="tf" id="tf" value="{{ form.get('tf', '0.5') if form else '0.5' }}"></div>
+      <div><label for="ts">Tiempo de exposición (s)</label><input type="number" step="any" name="ts" id="ts" value="{{ form.get('ts', '0.5') if form else '0.5' }}"></div>
+      <div><label for="X_R">Relación X/R</label><input type="number" step="any" name="X_R" id="X_R" value="{{ form.get('X_R', '15') if form else '15' }}"></div>
+    </div>
+    <div class="row2">
+      <div><label for="freq">Frecuencia (Hz)</label><input type="number" step="any" name="freq" id="freq" value="{{ form.get('freq', '60') if form else '60' }}"></div>
+      <div><label for="Cp">Factor de crecimiento futuro Cp</label><input type="number" step="any" name="Cp" id="Cp" value="{{ form.get('Cp', '1.0') if form else '1.0' }}"></div>
+    </div>
+
+    <label>Peso corporal de referencia</label>
+    <div class="radio-group" style="flex-direction: row; gap: 24px;">
+      <label class="radio-option"><input type="radio" name="body_kg" value="50" {% if not form or form.get('body_kg', '50') == '50' %}checked{% endif %}> 50 kg</label>
+      <label class="radio-option"><input type="radio" name="body_kg" value="70" {% if form and form.get('body_kg') == '70' %}checked{% endif %}> 70 kg</label>
+    </div>
+  </div>
+
+  <button type="submit" class="btn-primary">Calcular diseño</button>
+  <div class="disclaimer">El resultado requiere revisión y firma de un ingeniero eléctrico habilitado.</div>
+</form>
+
+{% if result %}
+<div class="panel" id="results">
+  <h2>Resultado</h2>
+
+  <div id="verdict-banner" class="{{ 'ok' if result.passes else 'fail' }}">
+    Veredicto: {{ 'PASA' if result.passes else 'NO PASA' }}
+  </div>
+
+  {% if soil and soil.__class__.__name__ == 'TwoLayerSoilModel' %}
+  <div class="field-hint" style="margin-bottom: 14px;">
+    Modelo de dos capas: ρ1={{ "%.1f"|format(soil.rho1) }} Ω·m, ρ2={{ "%.1f"|format(soil.rho2) }} Ω·m,
+    h1={{ "%.2f"|format(soil.h1) }} m (factor de reflexión K={{ "%.3f"|format(soil.reflection_factor) }})
+  </div>
+  {% endif %}
+
+  <table>
+    <tr><td class="label">Resistencia de malla (Rg)</td><td class="value">{{ "%.3f"|format(result.Rg) }} Ω</td></tr>
+    <tr><td class="label">Corriente de malla (IG)</td><td class="value">{{ "%.1f"|format(result.IG) }} A</td></tr>
+    <tr><td class="label">GPR</td><td class="value">{{ "%.1f"|format(result.GPR) }} V</td></tr>
+    <tr>
+      <td class="label">Tensión de malla (Em) — tolerable {{ "%.1f"|format(result.E_touch_tolerable) }} V</td>
+      <td class="value">{{ "%.1f"|format(result.Em) }} V &nbsp; <span class="badge {{ 'ok' if result.mesh_ok else 'fail' }}">{{ 'CUMPLE' if result.mesh_ok else 'NO CUMPLE' }}</span></td>
+    </tr>
+    <tr>
+      <td class="label">Tensión de paso (Es) — tolerable {{ "%.1f"|format(result.E_step_tolerable) }} V</td>
+      <td class="value">{{ "%.1f"|format(result.Es) }} V &nbsp; <span class="badge {{ 'ok' if result.step_ok else 'fail' }}">{{ 'CUMPLE' if result.step_ok else 'NO CUMPLE' }}</span></td>
+    </tr>
+  </table>
+
+  {% if result.notes %}
+  <h3>Notas</h3>
+  <ul class="notes-list">
+    {% for note in result.notes %}<li>{{ note }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if not result.passes %}
+  <div class="field-hint">
+    Palancas típicas para mejorar: más conductores (n_x/n_y), más varillas, mayor profundidad,
+    o una capa superficial de grava (sube la tensión tolerable). Ajustá los campos arriba y volvé a calcular.
+  </div>
+  {% endif %}
+
+  <h3>Generar memoria de cálculo</h3>
+  <form method="POST" action="/report">
+    {% for key, value in hidden_fields %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+    <div class="row2">
+      <div><label>Nombre del proyecto</label><input type="text" name="project_name" placeholder="Proyecto sin nombre"></div>
+      <div><label>Ubicación</label><input type="text" name="location"></div>
+    </div>
+    <div class="row2">
+      <div><label>Cliente</label><input type="text" name="client"></div>
+      <div><label>Preparado por</label><input type="text" name="prepared_by"></div>
+    </div>
+    <button type="submit" class="btn-secondary">📄 Descargar memoria de cálculo (.docx)</button>
+  </form>
+</div>
+{% endif %}
+
+</main>
+
+<script>
+function updateSoilFields() {
+  const soilType = document.querySelector('input[name="soil_type"]:checked').value;
+  document.getElementById('soil-uniform').classList.toggle('visible', soilType === 'uniform');
+  document.getElementById('soil-known').classList.toggle('visible', soilType === 'two_layer_known');
+  document.getElementById('soil-wenner').classList.toggle('visible', soilType === 'two_layer_wenner');
+
+  document.getElementById('surface-layer-fields').classList.toggle('visible', document.getElementById('use_surface_layer').checked);
+  document.getElementById('rods-fields').classList.toggle('visible', document.getElementById('use_rods').checked);
+}
+
+let wennerRowCount = 0;
+function addWennerRow(aVal, rhoVal) {
+  wennerRowCount++;
+  const tbody = document.getElementById('wenner-tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="number" step="any" name="wenner_a" value="${aVal || ''}"></td>
+    <td><input type="number" step="any" name="wenner_rho" value="${rhoVal || ''}"></td>
+    <td><button type="button" class="btn-remove-row" onclick="this.closest('tr').remove()">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  updateSoilFields();
+  for (let i = 0; i < 3; i++) addWennerRow();
+});
+</script>
+
+</body>
+</html>
