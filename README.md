@@ -17,6 +17,7 @@ Un repo descargable, agnóstico de proveedor de LLM (funciona con tu propia cuen
 src/
   engine/     # Motor de cálculo IEEE 80 (Python puro, testeado, sin LLM)
   visual/     # Visualización 3D interactiva (plotly) — solo renderiza, no calcula
+  reporting/  # Memoria de cálculo en Word (python-docx) — solo formatea, no calcula
   agents/     # Sistema de agentes (coordinador, suelo, diseñador, revisor) — agnóstico de proveedor LLM
 docs/         # Documentación técnica y de arquitectura
 tests/        # Tests del motor de cálculo
@@ -46,7 +47,7 @@ examples/     # Casos de ejemplo (inputs/outputs)
   dashboard HTML autocontenido con selector entre potencial, tensión de
   contacto y tensión de paso, con la malla superpuesta como referencia
   espacial. Ver ejemplo en `examples/visualize_potential_3d.py`.
-- **60 tests pasando** (`pytest tests/ -v`).
+- **69 tests pasando** (`pytest tests/ -v`).
 - ✅ **Sistema de agentes** (`src/agents/`) — agnóstico de proveedor
   (Anthropic o OpenAI, vía un adaptador común `LLMProvider`).
   Coordinador (orquestador Python plano, no LLM) que corre:
@@ -56,7 +57,11 @@ examples/     # Casos de ejemplo (inputs/outputs)
   La lógica de orquestación está testeada con un proveedor simulado
   (sin necesidad de API key); el ejemplo real (`examples/agents_pipeline_example.py`)
   requiere tu propia key de Anthropic u OpenAI.
-- ⏳ Módulo de reportes (memoria de cálculo)
+- ✅ **Módulo de reportes** (`src/reporting/report_builder.py`, python-docx) —
+  genera la memoria de cálculo en Word (.docx): datos de entrada, resultados
+  completos, veredicto, notas/advertencias íntegras (nunca se ocultan), y
+  espacio de firma del ingeniero responsable. Ver ejemplo en
+  `examples/generate_report_example.py`.
 - ⏳ Documentación de flujo (diagrama)
 
 ### Arquitectura de agentes
@@ -113,6 +118,7 @@ python examples/basic_grid_example.py           # suelo uniforme
 python examples/two_layer_soil_example.py       # suelo de dos capas (desde datos de campo)
 python examples/potential_profile_example.py    # perfil de potencial en grilla
 python examples/visualize_potential_3d.py       # dashboard 3D interactivo (genera examples/output/*.html)
+python examples/generate_report_example.py      # memoria de cálculo en Word (genera examples/output/*.docx)
 ```
 
 > **Nota sobre el modelo de dos capas**: la conversión de un modelo de dos
