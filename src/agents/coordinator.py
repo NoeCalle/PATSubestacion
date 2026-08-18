@@ -34,6 +34,8 @@ def run_design_pipeline(
     project_info: Optional[ProjectInfo] = None,
     visualization_reference: Optional[str] = None,
     on_event: Optional[EventCallback] = None,
+    include_3d_views: bool = True,
+    static_views_dir: Optional[str] = None,
 ) -> DesignSession:
     """
     Ejecuta el flujo completo: interpretación de suelo -> diseño ->
@@ -53,6 +55,13 @@ def run_design_pipeline(
       si ningún agente llegó a llamar la herramienta de cálculo).
     project_info / visualization_reference: se pasan directo al
       generador de reportes si report_output_path está definido.
+    include_3d_views: si es True (default) y se generó el informe,
+      también calcula y embebe las vistas 3D estáticas (potencial,
+      contacto, paso) -- automático, sin pasos manuales. Si el
+      renderizado falla, el informe se genera igual sin esa sección
+      (ver report_integration.py).
+    static_views_dir: carpeta para los PNG de las vistas 3D. Si no se
+      especifica, usa una subcarpeta junto al informe.
     on_event: callback opcional que se llama con eventos de progreso
       estructurados ({"type": "soil_started", ...}, {"type":
       "designer_done", "iteration": 1, "text": ...}, etc.) -- usado
@@ -108,7 +117,10 @@ def run_design_pipeline(
         if reviewer_result.final_text.strip().upper().startswith("APROBADO"):
             session.final_verdict = "APROBADO"
             emit("approved", iteration=session.iterations)
-            _maybe_generate_report(session, report_output_path, project_info, visualization_reference)
+            _maybe_generate_report(
+                session, report_output_path, project_info, visualization_reference,
+                include_3d_views, static_views_dir,
+            )
             emit("report_ready" if session.report_path else "report_unavailable", path=session.report_path)
             return session
 
@@ -123,7 +135,10 @@ def run_design_pipeline(
 
     session.final_verdict = "NO_RESUELTO"
     emit("not_resolved")
-    _maybe_generate_report(session, report_output_path, project_info, visualization_reference)
+    _maybe_generate_report(
+        session, report_output_path, project_info, visualization_reference,
+        include_3d_views, static_views_dir,
+    )
     emit("report_ready" if session.report_path else "report_unavailable", path=session.report_path)
     return session
 
@@ -133,6 +148,8 @@ def _maybe_generate_report(
     report_output_path: Optional[str],
     project_info: Optional[ProjectInfo],
     visualization_reference: Optional[str],
+    include_3d_views: bool,
+    static_views_dir: Optional[str],
 ) -> None:
     if not report_output_path:
         return
@@ -140,4 +157,6 @@ def _maybe_generate_report(
         session, report_output_path,
         project_info=project_info,
         visualization_reference=visualization_reference,
+        include_3d_views=include_3d_views,
+        static_views_dir=static_views_dir,
     )

@@ -72,6 +72,9 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     report_path = os.path.join(output_dir, "memoria_de_calculo_agentes.docx")
 
+    # Nota: run_design_pipeline calcula y embebe automáticamente las
+    # vistas 3D (potencial, contacto, paso) en el informe -- no hace
+    # falta pedirlo aparte (include_3d_views=True es el default).
     session = run_design_pipeline(
         provider, soil_data, project_requirements,
         report_output_path=report_path,

@@ -113,9 +113,14 @@ examples/     # Casos de ejemplo (inputs/outputs)
   directamente en la memoria de cálculo. Distinto del dashboard
   interactivo (plotly/HTML): Word no puede mostrar HTML, así que esto
   usa un camino de renderizado separado para producir imágenes fijas.
-  Verificado visualmente (conversión a PDF + inspección de página).
-  Ver ejemplo actualizado en `examples/generate_report_example.py`.
-- **137 tests pasando** (`pytest tests/ -v`).
+  **Automático en el pipeline de agentes** — `run_design_pipeline(...)`
+  las genera y embebe solo (`include_3d_views=True` por default, con
+  fallback resiliente: si el renderizado falla, el informe se genera
+  igual sin esa sección, con una nota explicando qué pasó, en vez de
+  perderse todo el documento). Verificado visualmente (conversión a
+  PDF + inspección de página). Ver ejemplo en
+  `examples/generate_report_example.py`.
+- **141 tests pasando** (`pytest tests/ -v`).
 - ⏳ Documentación de flujo (diagrama)
 
 ### Arquitectura de agentes

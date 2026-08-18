@@ -187,6 +187,101 @@ def test_build_report_accepts_project_info(tmp_path):
     assert "Planta Piloto" in text
 
 
+# ---------- Vistas 3D automáticas ----------
+
+def _count_embedded_images(docx_path: str) -> int:
+    import zipfile
+    with zipfile.ZipFile(docx_path) as z:
+        return len([n for n in z.namelist() if n.startswith("word/media/")])
+
+
+def test_build_report_embeds_3d_views_by_default(tmp_path):
+    reviewer_call = make_real_tool_call(VALID_UNIFORM_INPUT)
+    session = DesignSession(
+        designer_results=[AgentResult(final_text="P", tool_calls_made=[])],
+        reviewer_results=[AgentResult(final_text="APROBADO", tool_calls_made=[reviewer_call])],
+        iterations=1,
+    )
+
+    output_path = str(tmp_path / "report.docx")
+    build_report_from_session(session, output_path)  # include_3d_views=True por default
+
+    assert _count_embedded_images(output_path) == 3
+    text = full_document_text(output_path)
+    assert "Material complementario" in text
+
+
+def test_build_report_can_disable_3d_views(tmp_path):
+    reviewer_call = make_real_tool_call(VALID_UNIFORM_INPUT)
+    session = DesignSession(
+        designer_results=[AgentResult(final_text="P", tool_calls_made=[])],
+        reviewer_results=[AgentResult(final_text="APROBADO", tool_calls_made=[reviewer_call])],
+        iterations=1,
+    )
+
+    output_path = str(tmp_path / "report.docx")
+    build_report_from_session(session, output_path, include_3d_views=False)
+
+    assert _count_embedded_images(output_path) == 0
+    text = full_document_text(output_path)
+    assert "Material complementario" not in text
+
+
+def test_build_report_embeds_3d_views_for_two_layer_soil(tmp_path):
+    """El suelo de dos capas debe convertirse a resistividad efectiva
+    antes de calcular el perfil -- confirma que no crashea y que las
+    vistas igual se generan."""
+    reviewer_call = make_real_tool_call(
+        {
+            "rho1": 60.0, "rho2": 800.0, "h1": 4.0,
+            "Lx": 60.0, "Ly": 60.0, "h": 0.5, "d": 0.01,
+            "n_x": 7, "n_y": 7, "n_rods": 8, "L_rod": 3.0,
+            "If_sym": 10000.0, "Sf": 0.6,
+        },
+        tool_name="run_design_check_two_layer",
+    )
+    session = DesignSession(
+        designer_results=[AgentResult(final_text="P", tool_calls_made=[])],
+        reviewer_results=[AgentResult(final_text="APROBADO", tool_calls_made=[reviewer_call])],
+        iterations=1,
+    )
+
+    output_path = str(tmp_path / "report.docx")
+    build_report_from_session(session, output_path)
+
+    assert _count_embedded_images(output_path) == 3
+
+
+def test_build_report_survives_3d_rendering_failure(tmp_path, monkeypatch):
+    """Si el renderizado 3D falla, el informe se genera igual (sin esa
+    sección) en vez de perderse todo el documento."""
+    import src.agents.report_integration as report_integration_module
+
+    def broken_render(*args, **kwargs):
+        raise RuntimeError("fallo simulado de renderizado")
+
+    monkeypatch.setattr(report_integration_module, "render_static_views", broken_render)
+
+    reviewer_call = make_real_tool_call(VALID_UNIFORM_INPUT)
+    session = DesignSession(
+        designer_results=[AgentResult(final_text="P", tool_calls_made=[])],
+        reviewer_results=[AgentResult(final_text="APROBADO", tool_calls_made=[reviewer_call])],
+        iterations=1,
+    )
+
+    output_path = str(tmp_path / "report.docx")
+    result_path = build_report_from_session(session, output_path)
+
+    # El informe se generó igual, a pesar del fallo
+    assert result_path == output_path
+    assert os.path.exists(output_path)
+    assert _count_embedded_images(output_path) == 0
+
+    text = full_document_text(output_path)
+    assert "No se pudieron generar las vistas 3D" in text
+    assert "fallo simulado de renderizado" in text
+
+
 # ---------- Integración completa: run_design_pipeline genera el .docx ----------
 
 def test_pipeline_auto_generates_report_when_approved(tmp_path):
