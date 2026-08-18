@@ -17,7 +17,7 @@ Un repo descargable, agnóstico de proveedor de LLM (funciona con tu propia cuen
 src/
   engine/     # Motor de cálculo IEEE 80 (Python puro, testeado, sin LLM)
   visual/     # Visualización 3D interactiva (plotly) — solo renderiza, no calcula
-  agents/     # Definición de agentes y orquestación (multi-proveedor)
+  agents/     # Sistema de agentes (coordinador, suelo, diseñador, revisor) — agnóstico de proveedor LLM
 docs/         # Documentación técnica y de arquitectura
 tests/        # Tests del motor de cálculo
 examples/     # Casos de ejemplo (inputs/outputs)
@@ -46,12 +46,58 @@ examples/     # Casos de ejemplo (inputs/outputs)
   dashboard HTML autocontenido con selector entre potencial, tensión de
   contacto y tensión de paso, con la malla superpuesta como referencia
   espacial. Ver ejemplo en `examples/visualize_potential_3d.py`.
-- **50 tests pasando** (`pytest tests/ -v`).
-- ⏳ Stack técnico de orquestación multi-agente
-- ⏳ Definición de roles/prompts de cada agente (coordinador, suelo,
-  diseñador, revisor, reportes)
+- **60 tests pasando** (`pytest tests/ -v`).
+- ✅ **Sistema de agentes** (`src/agents/`) — agnóstico de proveedor
+  (Anthropic o OpenAI, vía un adaptador común `LLMProvider`).
+  Coordinador (orquestador Python plano, no LLM) que corre:
+  `soil_agent` → `designer_agent` ↔ `reviewer_agent` (con loop de
+  retroalimentación si el revisor rechaza). Los agentes nunca calculan
+  directamente — todo pasa por `src/engine` vía tools con JSON Schema.
+  La lógica de orquestación está testeada con un proveedor simulado
+  (sin necesidad de API key); el ejemplo real (`examples/agents_pipeline_example.py`)
+  requiere tu propia key de Anthropic u OpenAI.
 - ⏳ Módulo de reportes (memoria de cálculo)
 - ⏳ Documentación de flujo (diagrama)
+
+### Arquitectura de agentes
+
+```
+src/agents/
+├── providers/           # Adaptadores de proveedor (Anthropic, OpenAI)
+│   ├── base.py           # Interfaz común LLMProvider
+│   ├── anthropic_provider.py
+│   └── openai_provider.py
+├── tools.py              # Envuelve el motor de cálculo como tools con JSON Schema
+├── base_agent.py         # Loop de tool-calling genérico
+├── soil_agent.py          # Interpreta datos de resistividad
+├── designer_agent.py      # Propone y verifica geometrías de malla
+├── reviewer_agent.py      # Auditoría independiente (QA interno)
+└── coordinator.py         # Orquesta el flujo (Python plano, no LLM)
+```
+
+**Principio de diseño**: ningún agente calcula tensiones de paso/contacto
+"a mano" — todos llaman a las mismas funciones deterministas de
+`src/engine` (ya testeadas independientemente) a través de tools. El
+coordinador tampoco es un LLM: la secuencia y los reintentos son lógica
+Python fija y auditable, no una decisión que dependa de que un modelo
+"razone bien".
+
+### Cómo correr el pipeline de agentes con tu propia API key
+
+```bash
+pip install -r requirements.txt -r requirements-agents.txt
+cp .env.example .env   # completá tu API key
+export $(cat .env | xargs)  # o cargalo con python-dotenv / tu método preferido
+
+python examples/agents_pipeline_example.py --provider anthropic
+# o
+python examples/agents_pipeline_example.py --provider openai
+```
+
+> ⚠️ Este ejemplo consume créditos de tu cuenta (a diferencia del resto
+> de los ejemplos del repo, que no requieren ninguna API). El resultado
+> del pipeline (incluso "APROBADO") sigue siendo un insumo para el
+> ingeniero eléctrico habilitado que revisa y firma el informe final.
 
 ### Cómo correr los tests
 
