@@ -1,17 +1,24 @@
 """
 Registro de herramientas (tools) que los agentes pueden invocar.
 
-Cada tool envuelve una función del motor de cálculo (src/engine) con:
-  - nombre y descripción (para que el LLM sepa cuándo usarla)
-  - un JSON Schema de parámetros (mismo formato para Anthropic y OpenAI)
-  - la función Python que efectivamente la ejecuta
+Hay dos categorías:
 
-IMPORTANTE: estas funciones NUNCA calculan nada por su cuenta -- solo
-convierten los parámetros planos que manda el LLM en las dataclasses
-del motor, llaman a las funciones deterministas ya testeadas en
-tests/test_engine.py y tests/test_soil_two_layer.py, y devuelven el
-resultado como dict serializable a JSON. Este es el punto central que
-garantiza que ningún agente "calcule de memoria" una tensión de paso.
+1. TOOLS DE CÁLCULO -- envuelven una función del motor (src/engine).
+   NUNCA calculan nada por su cuenta: convierten los parámetros planos
+   que manda el LLM en las dataclasses del motor, llaman a las
+   funciones deterministas ya testeadas, y devuelven el resultado como
+   dict serializable a JSON. Esto garantiza que ningún agente "calcule
+   de memoria" una tensión de paso.
+
+2. TOOL DE INTERACCIÓN HUMANA (ask_human) -- no calcula nada, hace E/S
+   real: imprime una pregunta en la terminal y espera la respuesta
+   escrita de la persona con input(). Es lo que permite que un agente
+   pregunte por un dato faltante en vez de inventarlo o de quedarse
+   con una descripción incompleta.
+
+Cada tool tiene: nombre, descripción (para que el LLM sepa cuándo
+usarla), un JSON Schema de parámetros (mismo formato para Anthropic y
+OpenAI), y la función Python que efectivamente la ejecuta.
 """
 
 import json
@@ -103,6 +110,26 @@ def _fit_two_layer(**kwargs) -> Dict[str, Any]:
     measurements = [(m["a"], m["rho_a"]) for m in kwargs["measurements"]]
     fit = fit_two_layer_model(measurements)
     return {"rho1": fit.rho1, "rho2": fit.rho2, "h1": fit.h1, "residual": fit.residual}
+
+
+def _ask_human(question: str) -> str:
+    """
+    Imprime la pregunta al usuario real por la terminal y espera su
+    respuesta escrita con input(). Esto es lo que hace posible una
+    conversación real entre el agente y la persona -- sin esto, un
+    agente que "necesita preguntar algo" solo termina su turno con una
+    pregunta que nadie llega a ver ni responder.
+
+    Solo funciona en una sesión interactiva real (una terminal con
+    entrada estándar). En un script no interactivo, input() devuelve
+    vacío o lanza EOFError -- lo capturamos para no crashear, pero en
+    ese caso el agente va a recibir una respuesta vacía.
+    """
+    print(f"\n🧑‍🔧 Pregunta del agente: {question}")
+    try:
+        return input("> ")
+    except EOFError:
+        return ""
 
 
 # --- Parámetros de geometría/falla compartidos entre las dos tools de diseño ---
@@ -201,6 +228,29 @@ TOOL_DEFINITIONS: List[Dict[str, Any]] = [
             "required": ["measurements"],
         },
         "function": _fit_two_layer,
+    },
+    {
+        "name": "ask_human",
+        "description": (
+            "Preguntale directamente a la persona por un dato que te falta "
+            "(resistividad del suelo, corriente de falla, dimensiones del "
+            "terreno disponible, preferencias de diseño, etc.). Usala "
+            "SIEMPRE que necesites un dato crítico que no te dieron y no "
+            "puedas asumir con seguridad -- nunca inventes un valor de "
+            "resistividad, corriente de falla, o dimensiones de terreno. "
+            "Devuelve la respuesta tal cual la escribió la persona."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "question": {
+                    "type": "string",
+                    "description": "La pregunta específica y clara que le vas a hacer a la persona (una sola pregunta por llamada, no varias juntas).",
+                }
+            },
+            "required": ["question"],
+        },
+        "function": _ask_human,
     },
 ]
 

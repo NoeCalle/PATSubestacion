@@ -68,8 +68,15 @@ examples/     # Casos de ejemplo (inputs/outputs)
   diseñador, nunca texto del LLM). Si ningún agente llegó a llamar la
   herramienta de cálculo, no genera un documento — `session.report_path`
   queda en `None` en vez de fabricar un informe con datos inventados.
-- **79 tests pasando** (`pytest tests/ -v`).
+- ✅ **Herramienta `ask_human`** (`src/agents/tools.py`) — permite que
+  `soil_agent` y `designer_agent` (no `reviewer_agent`, que audita de
+  forma independiente) pregunten datos faltantes directamente por
+  terminal, en vez de inventarlos o quedarse con una descripción
+  incompleta. Convierte el pipeline de un guion de una sola pasada en
+  una conversación real. Ver `examples/interactive_agent_session.py`.
+- **85 tests pasando** (`pytest tests/ -v`).
 - ⏳ Documentación de flujo (diagrama)
+- ⏳ Modelador determinista (CLI sin IA, formulario paso a paso) — pendiente, discutido como "Producto A"
 
 ### Arquitectura de agentes
 
